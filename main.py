@@ -147,24 +147,24 @@ def upload_to_n8n(data: UploadRequest):
         safe_path = os.path.normpath(tmp_copy_path)
         print("📁 Using safe path:", repr(safe_path))
 
-        time.sleep(30)
+        time.sleep(50)
         driver.get(data.n8n_form_url)
         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='file']")))
         file_input = driver.find_element(By.CSS_SELECTOR, "input[type='file']")
 
         # Ensure the file input is interactable
         driver.execute_script("arguments[0].style.display = 'block';", file_input)
-        time.sleep(30)
+        time.sleep(50)
 
         file_input.send_keys(safe_path)
         print("📁 Uploading file:", safe_path)
-        time.sleep(30)
+        time.sleep(50)
 
         submit_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
         submit_button.click()
 
         print("✅ File uploaded to N8N form.")
-        time.sleep(30)
+        time.sleep(50)
 
         os.remove(tmp_copy_path)
         print("🗑️ Deleted copy:", tmp_copy_path)
