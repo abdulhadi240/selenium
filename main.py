@@ -12,17 +12,20 @@ import os, time, glob, shutil
 app = FastAPI()
 
 # ========== Models ==========
+
 class ScrapeRequest(BaseModel):
     email: str
     password: str
     auth_token: str
     linkedin_url: str
+    number: str
 
 class UploadRequest(BaseModel):
     email: str
     password: str
     download_link: str
     n8n_form_url: str
+    run_id: str  # added
 
 # ========== Download Helper ==========
 
@@ -52,9 +55,10 @@ def wait_for_download(download_dir, timeout=60):
 
         time.sleep(1)
 
-    raise TimeoutError("⛔ File did not fully download or unlock in time.") 
+    raise TimeoutError("⛔ File did not fully download or unlock in time.")
 
 # ========== Endpoint 1: Scrape ==========
+
 @app.post("/run_scrape/")
 def run_scrape(data: ScrapeRequest):
     try:
@@ -86,6 +90,15 @@ def run_scrape(data: ScrapeRequest):
         driver.execute_script("arguments[0].click();", check_button)
         time.sleep(10)
 
+        # Set the number of leads in the input field
+        limit_input = wait.until(EC.presence_of_element_located((By.ID, "order_limit")))
+        limit_input.clear()
+        limit_input.send_keys(data.number)
+        print("🔢 Number of leads set to:", data.number)
+
+        # Optional: small wait to ensure the input is registered before clicking 'Create Order'
+        time.sleep(10)
+
         create_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@type='submit' and @value='Create Order']")))
         driver.execute_script("arguments[0].click();", create_button)
         time.sleep(15)
@@ -109,6 +122,7 @@ def run_scrape(data: ScrapeRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 # ========== Endpoint 2: Upload ==========
+
 @app.post("/upload_to_n8n/")
 def upload_to_n8n(data: UploadRequest):
     BASE_DIR = os.getcwd()
@@ -139,7 +153,7 @@ def upload_to_n8n(data: UploadRequest):
 
         driver.get(data.download_link)
         downloaded_file = wait_for_download(DOWNLOAD_DIR)
-        time.sleep(15)
+        time.sleep(150)
 
         tmp_copy_path = os.path.join(DOWNLOAD_DIR, f"copy_{os.path.basename(downloaded_file)}")
         shutil.copy2(downloaded_file, tmp_copy_path)
@@ -152,26 +166,31 @@ def upload_to_n8n(data: UploadRequest):
         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='file']")))
         file_input = driver.find_element(By.CSS_SELECTOR, "input[type='file']")
 
-        # Ensure the file input is interactable
+        # Show file input if hidden
         driver.execute_script("arguments[0].style.display = 'block';", file_input)
         time.sleep(50)
 
+        # Upload file
         file_input.send_keys(safe_path)
         print("📁 Uploading file:", safe_path)
         time.sleep(50)
 
-        submit_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-        submit_button.click()
-
-        print("✅ File uploaded to N8N form.")
+        # Fill Run ID
+        run_id_input = driver.find_element(By.CSS_SELECTOR, "input[name='field-1']")
+        run_id_input.clear()
+        run_id_input.send_keys(data.run_id)
+        print("🔢 Run ID added:", data.run_id)
         time.sleep(50)
 
-        os.remove(tmp_copy_path)
-        print("🗑️ Deleted copy:", tmp_copy_path)
+        # Submit form
+        submit_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+        submit_button.click()
+        print("✅ File and Run ID submitted.")
+        time.sleep(150)
 
         return {
             "status": "success",
-            "message": "File downloaded and uploaded to N8N form successfully."
+            "message": "File and Run ID submitted successfully to N8N form."
         }
 
     except Exception as e:
