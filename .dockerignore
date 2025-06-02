@@ -1,0 +1,33 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.env/
+.env.*
+
+# Logs
+*.log
+
+# IDE and editor settings
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Downloads directory (if generated at runtime)
+downloads/
+
+# OS-related files
+*.swp
+*.bak
+*.tmp
+
+# Git
+.git
+.gitignore
